@@ -12,7 +12,7 @@ const BOARD_HEIGHT: u16 = 6;
 // Holds all state.
 struct GameState {
     selection_row: u16,
-
+    is_turn_over: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -30,7 +30,7 @@ trait Game {
     //fn whose_turn(&self) -> Option<PlayerName>;
     fn new() -> Self;
     fn accept_input(&mut self, event_code: KeyCode);
-    fn drop_puck(&self) -> bool; // Tries to drop a marker. Returns true if successful,
+    fn drop_puck(&mut self); // Tries to drop a marker. Returns true if successful,
                                  // false if column is full
 }
 
@@ -119,14 +119,15 @@ impl Game for GameState {
         }
     }
 
-    fn drop_puck(&self) -> bool {
-        true
+    fn drop_puck(&mut self) {
+        
     }
 
     fn new() -> Self
     {
         GameState {
-            selection_row: 1
+            selection_row: 1,
+            is_turn_over: false,
         }
     }
 }
