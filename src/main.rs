@@ -42,6 +42,7 @@ impl Game for GameState {
         unimplemented!();
     }
     fn take_turn(&mut self, player: PlayerName) {
+        // TODO: make this a GameState variable. Modify it in drop_puck()
         let mut is_turn_over: bool = false;
         while !is_turn_over {
             // `poll()` waits for an `Event` for a given time period
@@ -79,43 +80,31 @@ impl Game for GameState {
                )?;
 
         // Print game board
-        for y in 1..7 {
-            for x in 0..6 {
+        for y in 0..(BOARD_HEIGHT + 1) {
+            for x in 0..(BOARD_WIDTH + 1) {
                 queue!(stdout,
                        // There are 2 chars per row, hence x * 2.
                        // And we want the board offset by 2 from the title => y + 2
-                       cursor::MoveTo(x*2, y + 1),
+                       cursor::MoveTo(x*2, y + 2),
                        style::Print("| ")
                        )?;
 
             }
         }
-        /*
-        for y in 0..40 {
-        for x in 0..150 {
-          if (y == 0 || y == 40 - 1) || (x == 0 || x == 150 - 1) {
-            // in this loop we are more efficient by not flushing the buffer.
-            stdout
-              .queue(cursor::MoveTo(x,y))?
-              .queue(style::PrintStyledContent( "█".blue()))?;
-          }
-        }
-      }
-      */
-      stdout.flush()?;
-      Ok(())
+        stdout.flush()?;
+        Ok(())
     }
 
     fn accept_input(&mut self, event_code: KeyCode) {
         match event_code {
            KeyCode::Left => {
                // Move Left
-               if self.selection_row > 0 {
+               if self.selection_row > 1 {
                    self.selection_row -= 1;
                }
            },
            KeyCode::Right => {
-               if self.selection_row < 7 {
+               if self.selection_row < BOARD_WIDTH {
                    self.selection_row += 1;
                }
            },
@@ -125,6 +114,7 @@ impl Game for GameState {
            KeyCode::Enter => {
                self.drop_puck();
            },
+           KeyCode::Esc => { exit(0); },
            _ => {},
         }
     }
@@ -149,6 +139,7 @@ fn exit(code: i32) {
             std::process::exit(-1);
         }
     }
+    println!("Thanks for playing!");
     std::process::exit(code);
 }
 
@@ -164,26 +155,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             Some(player) => game.take_turn(player.clone()),
             _ => exit(1),
         }
-        //println!("It is now {:?}'s turn.", current_player);
-        /*
-        let mut is_turn_over: bool = false;
-        while !is_turn_over {
-            // `poll()` waits for an `Event` for a given time period
-            if crossterm::event::poll(Duration::from_millis(500))? {
-                // It's guaranteed that the `read()` won't block when the `poll()`
-                // function returns `true`
-                match crossterm::event::read()? {
-                    Event::Key(event) => {
-                        },
-                    _ => {},
-                }
-            } else {
-                // Timeout expired and no `Event` is available
-            }
-            game.draw_board()?;
-        }
-        std::thread::sleep_ms(1000);
-        */
         player_list.rotate_right(1); // Have to do this at the end to avoid borrowing twice
 
     }
