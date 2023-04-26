@@ -4,6 +4,7 @@ use std::io::stdout;
 use crossterm::{ExecutableCommand, queue, terminal, cursor, style::{self, Stylize}};
 use crossterm::event::{KeyCode, Event};
 use std::error::Error;
+use array2d::Array2D;
 
 const BOARD_WIDTH: u16 = 7;
 const BOARD_HEIGHT: u16 = 6;
@@ -13,6 +14,7 @@ const BOARD_HEIGHT: u16 = 6;
 struct GameState {
     selection_row: u16,
     is_turn_over: bool,
+    board: Array2D<PlayerName>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -20,6 +22,7 @@ enum PlayerName {
     Player,
     Computer,
     Player2,
+    None,
 }
 
 trait Game {
@@ -82,6 +85,7 @@ impl Game for GameState {
         // Print game board
         for y in 0..(BOARD_HEIGHT + 1) {
             for x in 0..(BOARD_WIDTH + 1) {
+                // Print vertical lines
                 queue!(stdout,
                        // There are 2 chars per row, hence x * 2.
                        // And we want the board offset by 2 from the title => y + 2
@@ -91,6 +95,27 @@ impl Game for GameState {
 
             }
         }
+
+        // Print all pucks which are there.
+        let mut row_index = 0;
+        let mut col_index = 0;
+        while row_index < self.board.num_rows() {
+            while col_index < self.board.num_columns() {
+                let mut x: i32 = row_index as i32 * 2 - 1;
+                if x < 0 { x = 0; };
+                queue!(stdout, cursor::MoveTo(x as u16, (col_index + 2) as u16))?;
+                match self.board.get(row_index, col_index) {
+                    None => {},
+                    Some(PlayerName::None) => {},
+                    Some(PlayerName::Player) => queue!(stdout, style::PrintStyledContent("o".green()))?,
+                    _ => {},
+                };
+                col_index += 1;
+            }
+            row_index += 1;
+            col_index = 0;
+        }
+
         stdout.flush()?;
         Ok(())
     }
@@ -114,13 +139,18 @@ impl Game for GameState {
            KeyCode::Enter => {
                self.drop_puck();
            },
-           KeyCode::Esc => { exit(0); },
+           KeyCode::Esc => {
+               println!("Final status of board:\n{:?}", self.board);
+               exit(0);
+           },
            _ => {},
         }
     }
 
     fn drop_puck(&mut self) {
-        
+        match self.board.set(self.selection_row as usize, 1, PlayerName::Player) {
+            _ => {}
+        };
     }
 
     fn new() -> Self
@@ -128,6 +158,7 @@ impl Game for GameState {
         GameState {
             selection_row: 1,
             is_turn_over: false,
+            board: Array2D::filled_with(PlayerName::None, BOARD_WIDTH as usize, BOARD_HEIGHT as usize),
         }
     }
 }
