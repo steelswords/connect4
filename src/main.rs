@@ -82,7 +82,7 @@ impl Game for GameState {
 
         // Print puck over slot player is currently selecting.
         queue!(stdout,
-               cursor::MoveTo(2 * self.selection_col - 1, 1),
+               cursor::MoveTo(2 * self.selection_col + 1, 1),
                style::PrintStyledContent("o".green().slow_blink())
                )?;
 
@@ -106,7 +106,7 @@ impl Game for GameState {
         while row_index < self.board.num_rows() {
             while col_index < self.board.num_columns() {
                 // Get x of dropped puck.
-                let mut x: i32 = col_index as i32 * 2 - 1;
+                let mut x: i32 = col_index as i32 * 2 + 1;
                 if x < 0 { x = 0; };
 
                 let y = row_index + 2;
@@ -135,12 +135,12 @@ impl Game for GameState {
         match event_code {
            KeyCode::Left => {
                // Move Left
-               if self.selection_col > 1 {
+               if self.selection_col > 0 {
                    self.selection_col -= 1;
                }
            },
            KeyCode::Right => {
-               if self.selection_col < BOARD_WIDTH {
+               if self.selection_col < BOARD_WIDTH - 1 { // Max is BOARD_WIDTH - 1
                    self.selection_col += 1;
                }
            },
@@ -163,7 +163,6 @@ impl Game for GameState {
         let mut y = BOARD_HEIGHT - 1;
         let column_iter = self.board.column_iter(self.selection_col as usize).unwrap();
         // TODO: Refactor this to be neater
-        // TODO: Somehow we've got to indicate if the turn is over or not.
         for element in column_iter {
             match element.clone() {
                 PlayerName::Player => y = y.checked_sub(1).unwrap_or(y),
@@ -173,6 +172,7 @@ impl Game for GameState {
             };
         }
 
+        // TODO: Somehow we've got to indicate if the turn is over or not.
         self.debug_print(format!("Dropping puck at {},{}", self.selection_col, y));
         self.board.set(y as usize, self.selection_col as usize, PlayerName::Player).unwrap();
     }
@@ -188,7 +188,7 @@ impl Game for GameState {
     fn new() -> Self
     {
         GameState {
-            selection_col: 1,
+            selection_col: 0,
             is_turn_over: false,
             board: Array2D::filled_with(PlayerName::None, BOARD_HEIGHT as usize, BOARD_WIDTH as usize),
             debug_message: String::new(),
