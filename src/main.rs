@@ -162,11 +162,13 @@ impl Game for GameState {
         // Get y of dropped puck.
         let mut y = BOARD_HEIGHT - 1;
         let column_iter = self.board.column_iter(self.selection_col as usize).unwrap();
+        // TODO: Refactor this to be neater
+        // TODO: Somehow we've got to indicate if the turn is over or not.
         for element in column_iter {
             match element.clone() {
-                PlayerName::Player => y -= 1,
-                PlayerName::Player2 => y -= 1,
-                PlayerName::Computer => y -= 1,
+                PlayerName::Player => y = y.checked_sub(1).unwrap_or(y),
+                PlayerName::Player2 => y = y.checked_sub(1).unwrap_or(y),
+                PlayerName::Computer => y = y.checked_sub(1).unwrap_or(y),
                 _ => {},
             };
         }
