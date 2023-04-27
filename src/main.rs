@@ -151,7 +151,7 @@ impl Game for GameState {
                self.drop_puck();
            },
            KeyCode::Esc => {
-               println!("Final status of board:\n{:?}", self.board);
+               //println!("Final status of board:\n{:?}", self.board);
                exit(0);
            },
            _ => {},
@@ -163,25 +163,29 @@ impl Game for GameState {
         let mut y = BOARD_HEIGHT - 1;
         let column_iter = self.board.column_iter(self.selection_col as usize).unwrap();
         // TODO: Refactor this to be neater
+
+        // Starting at the bottom, subtract 1 from y for each puck found in the column.
         for element in column_iter {
             match element.clone() {
-                PlayerName::Player => y = y.checked_sub(1).unwrap_or(y),
-                PlayerName::Player2 => y = y.checked_sub(1).unwrap_or(y),
-                PlayerName::Computer => y = y.checked_sub(1).unwrap_or(y),
+                PlayerName::Player | PlayerName::Player2 | PlayerName::Computer => {
+                    y = y.checked_sub(1).unwrap_or(y)
+                },
                 _ => {},
             };
         }
 
-        // TODO: Somehow we've got to indicate if the turn is over or not.
-        self.debug_print(format!("Dropping puck at {},{}", self.selection_col, y));
-        self.board.set(y as usize, self.selection_col as usize, PlayerName::Player).unwrap();
+        // If there is not a puck already in x, y, place the puck and end the turn.
+        match self.board.get(y as usize, self.selection_col as usize) {
+           Some(PlayerName::None) => {
+                self.debug_print(format!("Dropping puck at {},{}", self.selection_col, y));
+                self.board.set(y as usize, self.selection_col as usize, PlayerName::Player).unwrap();
+                self.is_turn_over = true;
+            },
+           _  => self.debug_print(format!("This column is full. Try again.")),
+        }
     }
 
     fn debug_print(&mut self, message: String) {
-        /*
-        queue!(stdout(), cursor::SavePosition, cursor::MoveTo(0, 10), style::Print(message), cursor::RestorePosition ).unwrap();
-        stdout().flush().unwrap();
-        */
         self.debug_message = message.clone();
     }
 
