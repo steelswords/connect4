@@ -12,9 +12,10 @@ const BOARD_HEIGHT: u16 = 6;
 
 // Holds all state.
 struct GameState {
-    selection_row: u16,
+    selection_col: u16,
     is_turn_over: bool,
-    board: Array2D<PlayerName>,
+    board: Array2D<PlayerName>, // 0,0 is top left.
+    debug_message: String,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -35,6 +36,7 @@ trait Game {
     fn accept_input(&mut self, event_code: KeyCode);
     fn drop_puck(&mut self); // Tries to drop a marker. Returns true if successful,
                                  // false if column is full
+    fn debug_print(&mut self, message: String);
 }
 
 impl Game for GameState {
@@ -65,6 +67,7 @@ impl Game for GameState {
         }
         self.draw_board();
     }
+
     fn draw_board(&self) -> Result<(), Box<dyn Error>> {
         let mut stdout = stdout();
         // Clear terminal
@@ -73,18 +76,19 @@ impl Game for GameState {
         // Print game title
         queue!(stdout,
                cursor::MoveTo(0,0),
-               style::PrintStyledContent(format!("Connect 4").blue())
+               style::PrintStyledContent(format!("Connect 4").blue()),
+               style::Print(&self.debug_message)
                )?;
 
         // Print puck over slot player is currently selecting.
         queue!(stdout,
-               cursor::MoveTo(2 * self.selection_row - 1, 1),
+               cursor::MoveTo(2 * self.selection_col - 1, 1),
                style::PrintStyledContent("o".green().slow_blink())
                )?;
 
         // Print game board
-        for y in 0..(BOARD_HEIGHT + 1) {
-            for x in 0..(BOARD_WIDTH + 1) {
+        for y in 0..BOARD_HEIGHT {
+            for x in 0..(BOARD_WIDTH + 1) { // +1 for the end |
                 // Print vertical lines
                 queue!(stdout,
                        // There are 2 chars per row, hence x * 2.
@@ -101,9 +105,16 @@ impl Game for GameState {
         let mut col_index = 0;
         while row_index < self.board.num_rows() {
             while col_index < self.board.num_columns() {
-                let mut x: i32 = row_index as i32 * 2 - 1;
+                // Get x of dropped puck.
+                let mut x: i32 = col_index as i32 * 2 - 1;
                 if x < 0 { x = 0; };
-                queue!(stdout, cursor::MoveTo(x as u16, (col_index + 2) as u16))?;
+
+                let y = row_index + 2;
+
+                
+                
+
+                queue!(stdout, cursor::MoveTo(x as u16, y as u16))?;
                 match self.board.get(row_index, col_index) {
                     None => {},
                     Some(PlayerName::None) => {},
@@ -124,13 +135,13 @@ impl Game for GameState {
         match event_code {
            KeyCode::Left => {
                // Move Left
-               if self.selection_row > 1 {
-                   self.selection_row -= 1;
+               if self.selection_col > 1 {
+                   self.selection_col -= 1;
                }
            },
            KeyCode::Right => {
-               if self.selection_row < BOARD_WIDTH {
-                   self.selection_row += 1;
+               if self.selection_col < BOARD_WIDTH {
+                   self.selection_col += 1;
                }
            },
            KeyCode::Down => {
@@ -148,17 +159,37 @@ impl Game for GameState {
     }
 
     fn drop_puck(&mut self) {
-        match self.board.set(self.selection_row as usize, 1, PlayerName::Player) {
-            _ => {}
-        };
+        // Get y of dropped puck.
+        let mut y = BOARD_HEIGHT - 1;
+        let column_iter = self.board.column_iter(self.selection_col as usize).unwrap();
+        for element in column_iter {
+            match element.clone() {
+                PlayerName::Player => y -= 1,
+                PlayerName::Player2 => y -= 1,
+                PlayerName::Computer => y -= 1,
+                _ => {},
+            };
+        }
+
+        self.debug_print(format!("Dropping puck at {},{}", self.selection_col, y));
+        self.board.set(y as usize, self.selection_col as usize, PlayerName::Player).unwrap();
+    }
+
+    fn debug_print(&mut self, message: String) {
+        /*
+        queue!(stdout(), cursor::SavePosition, cursor::MoveTo(0, 10), style::Print(message), cursor::RestorePosition ).unwrap();
+        stdout().flush().unwrap();
+        */
+        self.debug_message = message.clone();
     }
 
     fn new() -> Self
     {
         GameState {
-            selection_row: 1,
+            selection_col: 1,
             is_turn_over: false,
-            board: Array2D::filled_with(PlayerName::None, BOARD_WIDTH as usize, BOARD_HEIGHT as usize),
+            board: Array2D::filled_with(PlayerName::None, BOARD_HEIGHT as usize, BOARD_WIDTH as usize),
+            debug_message: String::new(),
         }
     }
 }
@@ -174,6 +205,8 @@ fn exit(code: i32) {
     println!("Thanks for playing!");
     std::process::exit(code);
 }
+
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Set up terminal
