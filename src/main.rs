@@ -16,6 +16,8 @@ struct GameState {
     is_turn_over: bool,
     board: Array2D<PlayerName>, // 0,0 is top left.
     debug_message: String,
+    player_list: VecDeque<PlayerName>,
+    current_player: PlayerName,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -26,10 +28,19 @@ enum PlayerName {
     None,
 }
 
+fn player_to_color(player: &PlayerName) -> style::Color {
+    match player {
+        PlayerName::None => style::Color::DarkGrey,
+        PlayerName::Computer => style::Color::Red,
+        PlayerName::Player => style::Color::Green,
+        PlayerName::Player2 => style::Color::Blue,
+    }
+}
+
 trait Game {
     fn is_game_over(&self) -> bool;
     fn who_wins(&self) -> Option<PlayerName>;
-    fn take_turn(&mut self, player: PlayerName);
+    fn take_turn(&mut self);
     fn draw_board(&self) -> Result<(), Box<dyn Error>>;
     //fn whose_turn(&self) -> Option<PlayerName>;
     fn new() -> Self;
@@ -46,10 +57,10 @@ impl Game for GameState {
     fn who_wins(&self) -> Option<PlayerName> {
         unimplemented!();
     }
-    fn take_turn(&mut self, player: PlayerName) {
+    fn take_turn(&mut self) {
         // TODO: make this a GameState variable. Modify it in drop_puck()
-        let mut is_turn_over: bool = false;
-        while !is_turn_over {
+        self.is_turn_over = false;
+        while !self.is_turn_over {
             // `poll()` waits for an `Event` for a given time period
             if crossterm::event::poll(Duration::from_millis(500)).is_ok() {
                 // It's guaranteed that the `read()` won't block when the `poll()`
@@ -65,6 +76,17 @@ impl Game for GameState {
             }
             self.draw_board();
         }
+
+        self.debug_print(format!("Good turn, {:?}!", self.current_player));
+        // Rotate players.
+        self.player_list.rotate_right(1); // Have to do this at the end to avoid borrowing twice
+        if let Some(current) = self.player_list.front() {
+            self.current_player = current.to_owned();
+        }
+        else {
+            self.debug_print(format!("Something bad happened."));
+        }
+
         self.draw_board();
     }
 
@@ -83,7 +105,7 @@ impl Game for GameState {
         // Print puck over slot player is currently selecting.
         queue!(stdout,
                cursor::MoveTo(2 * self.selection_col + 1, 1),
-               style::PrintStyledContent("o".green().slow_blink())
+               style::PrintStyledContent("o".with(player_to_color(&self.current_player)).slow_blink())
                )?;
 
         // Print game board
@@ -118,8 +140,9 @@ impl Game for GameState {
                 match self.board.get(row_index, col_index) {
                     None => {},
                     Some(PlayerName::None) => {},
-                    Some(PlayerName::Player) => queue!(stdout, style::PrintStyledContent("o".green()))?,
-                    _ => {},
+                    Some(player) => {
+                            queue!(stdout, style::PrintStyledContent("o".with(player_to_color(&player))))?;
+                        }
                 };
                 col_index += 1;
             }
@@ -178,7 +201,7 @@ impl Game for GameState {
         match self.board.get(y as usize, self.selection_col as usize) {
            Some(PlayerName::None) => {
                 self.debug_print(format!("Dropping puck at {},{}", self.selection_col, y));
-                self.board.set(y as usize, self.selection_col as usize, PlayerName::Player).unwrap();
+                self.board.set(y as usize, self.selection_col as usize, self.current_player.clone()).unwrap();
                 self.is_turn_over = true;
             },
            _  => self.debug_print(format!("This column is full. Try again.")),
@@ -196,6 +219,8 @@ impl Game for GameState {
             is_turn_over: false,
             board: Array2D::filled_with(PlayerName::None, BOARD_HEIGHT as usize, BOARD_WIDTH as usize),
             debug_message: String::new(),
+            player_list: VecDeque::from(vec![PlayerName::Player, PlayerName::Computer]),
+            current_player: PlayerName::Player,
         }
     }
 }
@@ -215,18 +240,15 @@ fn exit(code: i32) {
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Set up terminal
-    // Main loop
     let mut game = GameState::new();
-    let mut player_list = VecDeque::from(vec![PlayerName::Player, PlayerName::Computer]);
+
+    // Set up terminal
     crossterm::terminal::enable_raw_mode()?;
+
+    // Main loop
     while !game.is_game_over() {
-        let current_player = player_list.front().to_owned();
-        match current_player {
-            Some(player) => game.take_turn(player.clone()),
-            _ => exit(1),
-        }
-        player_list.rotate_right(1); // Have to do this at the end to avoid borrowing twice
+        // TODO: Abstract away this player tally.
+        game.take_turn();
 
     }
     Ok(())
