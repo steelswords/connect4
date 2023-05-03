@@ -219,7 +219,7 @@ impl Game for GameState {
             is_turn_over: false,
             board: Array2D::filled_with(PlayerName::None, BOARD_HEIGHT as usize, BOARD_WIDTH as usize),
             debug_message: String::new(),
-            player_list: VecDeque::from(vec![PlayerName::Player, PlayerName::Computer]),
+            player_list: VecDeque::from(vec![PlayerName::Player, PlayerName::Player2]),
             current_player: PlayerName::Player,
         }
     }
