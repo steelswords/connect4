@@ -18,9 +18,10 @@ struct GameState {
     debug_message: String,
     player_list: VecDeque<PlayerName>,
     current_player: PlayerName,
+    winner: PlayerName,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum PlayerName {
     Player,
     Computer,
@@ -47,15 +48,19 @@ trait Game {
     fn accept_input(&mut self, event_code: KeyCode);
     fn drop_puck(&mut self); // Tries to drop a marker. Returns true if successful,
                                  // false if column is full
+    fn check_if_game_over(&mut self);
     fn debug_print(&mut self, message: String);
 }
 
 impl Game for GameState {
     fn is_game_over(&self) -> bool {
-        false
+        self.winner != PlayerName::None
     }
     fn who_wins(&self) -> Option<PlayerName> {
-        unimplemented!();
+        match self.winner {
+            PlayerName::None => None,
+            _ => Some(self.winner)
+        }
     }
     fn take_turn(&mut self) {
         // TODO: make this a GameState variable. Modify it in drop_puck()
@@ -202,10 +207,50 @@ impl Game for GameState {
            Some(PlayerName::None) => {
                 self.debug_print(format!("Dropping puck at {},{}", self.selection_col, y));
                 self.board.set(y as usize, self.selection_col as usize, self.current_player.clone()).unwrap();
+                // Check if game is over now.
+                self.check_if_game_over();
                 self.is_turn_over = true;
             },
            _  => self.debug_print(format!("This column is full. Try again.")),
         }
+    }
+
+    fn check_if_game_over(&mut self) {
+        // NOTE: This could be a lot more efficient if I passed in the last changed
+        // location and only checked from there, but that is more complicated and
+        // I want to get going with this.
+
+        let mut same_adjacent_counter = 0;
+        let mut last_player_seen = PlayerName::None;
+
+        // Check for horizontal streaks.
+        // For each row
+        for y in 0..self.board.num_rows() {
+            // Loop over the row
+            for x in 0..self.board.num_columns() {
+                if let Some(element) = self.board.get(y,x) {
+                    if element.to_owned() == last_player_seen {
+                        same_adjacent_counter += 1;
+                        // If the streak is long enough, we found a winner!
+                        if same_adjacent_counter >= 4 {
+                            self.winner = element.to_owned();
+                        }
+                    }
+                    else {
+                        same_adjacent_counter = 1;
+                        last_player_seen = element.to_owned();
+                    }
+                }
+                else {
+                    // We've encountered an empty board grid
+                    same_adjacent_counter = 0;
+                }
+            }
+        }
+        //
+        // Do the same for columns
+        //
+        // TODO: Diagonals
     }
 
     fn debug_print(&mut self, message: String) {
@@ -221,6 +266,7 @@ impl Game for GameState {
             debug_message: String::new(),
             player_list: VecDeque::from(vec![PlayerName::Player, PlayerName::Player2]),
             current_player: PlayerName::Player,
+            winner: PlayerName::None,
         }
     }
 }
@@ -251,5 +297,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         game.take_turn();
 
     }
-    Ok(())
+    game.debug_print(format!("Good job! {:?} is the winner!", game.winner));
+    game.draw_board()
 }
