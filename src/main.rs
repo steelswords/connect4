@@ -50,6 +50,7 @@ trait Game {
                                  // false if column is full
     fn check_if_game_over(&mut self);
     fn debug_print(&mut self, message: String);
+    fn check_helper(&mut self, x: usize, y: usize, same_adjacent_counter: &mut i32, last_player_seen: &mut PlayerName);
 }
 
 impl Game for GameState {
@@ -215,6 +216,28 @@ impl Game for GameState {
         }
     }
 
+    // Uses state in last_player_seen and same_adjacent_counter to check if there
+    // are four in a row.
+    fn check_helper(&mut self, x: usize, y: usize, same_adjacent_counter: &mut i32, last_player_seen: &mut PlayerName) {
+        if let Some(element) = self.board.get(y,x) {
+            if *element == *last_player_seen {
+                *same_adjacent_counter += 1;
+                // If the streak is long enough, we found a winner!
+                if *same_adjacent_counter >= 4 {
+                    self.winner = element.clone();
+                }
+            }
+            else {
+                *same_adjacent_counter = 1;
+                *last_player_seen = element.clone();
+            }
+        }
+        else {
+            // We've encountered an empty board grid
+            *same_adjacent_counter = 0;
+        }
+    }
+
     fn check_if_game_over(&mut self) {
         // NOTE: This could be a lot more efficient if I passed in the last changed
         // location and only checked from there, but that is more complicated and
@@ -228,28 +251,21 @@ impl Game for GameState {
         for y in 0..self.board.num_rows() {
             // Loop over the row
             for x in 0..self.board.num_columns() {
-                if let Some(element) = self.board.get(y,x) {
-                    if element.to_owned() == last_player_seen {
-                        same_adjacent_counter += 1;
-                        // If the streak is long enough, we found a winner!
-                        if same_adjacent_counter >= 4 {
-                            self.winner = element.to_owned();
-                        }
-                    }
-                    else {
-                        same_adjacent_counter = 1;
-                        last_player_seen = element.to_owned();
-                    }
-                }
-                else {
-                    // We've encountered an empty board grid
-                    same_adjacent_counter = 0;
-                }
+                self.check_helper(x, y, &mut same_adjacent_counter, &mut last_player_seen);
             }
         }
         //
         // Do the same for columns
         //
+        same_adjacent_counter = 0;
+        last_player_seen = PlayerName::None;
+        //for y in 0..self.board.num_rows() {
+        //    for x in 0..self.board.num_columns() {
+        //        if let Some(element) = self.board.get(y,x) {
+        //            if element.to_owned 
+        //        }
+        //    }
+        //}
         // TODO: Diagonals
     }
 
