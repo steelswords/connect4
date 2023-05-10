@@ -220,21 +220,22 @@ impl Game for GameState {
     // are four in a row.
     fn check_helper(&mut self, x: usize, y: usize, same_adjacent_counter: &mut i32, last_player_seen: &mut PlayerName) {
         if let Some(element) = self.board.get(y,x) {
-            if *element == *last_player_seen {
+            if *element == *last_player_seen && *last_player_seen != PlayerName::None {
                 *same_adjacent_counter += 1;
                 // If the streak is long enough, we found a winner!
                 if *same_adjacent_counter >= 4 {
                     self.winner = element.clone();
                 }
             }
-            else {
+            else { // The element is different from last_player_seen, but there is a puck there
                 *same_adjacent_counter = 1;
                 *last_player_seen = element.clone();
             }
         }
-        else {
+        else { // No puck in the space. Reset everything.
             // We've encountered an empty board grid
             *same_adjacent_counter = 0;
+            *last_player_seen = PlayerName::None;
         }
     }
 
@@ -254,18 +255,21 @@ impl Game for GameState {
                 self.check_helper(x, y, &mut same_adjacent_counter, &mut last_player_seen);
             }
         }
+        if self.winner != PlayerName::None {
+            return;
+        }
         //
         // Do the same for columns
         //
         same_adjacent_counter = 0;
         last_player_seen = PlayerName::None;
-        //for y in 0..self.board.num_rows() {
-        //    for x in 0..self.board.num_columns() {
-        //        if let Some(element) = self.board.get(y,x) {
-        //            if element.to_owned 
-        //        }
-        //    }
-        //}
+        // For each column
+        for x in 0..self.board.num_columns() {
+            // Loop over the column
+            for y in 0..self.board.num_rows() {
+                self.check_helper( x, y, &mut same_adjacent_counter, &mut last_player_seen);
+            }
+        }
         // TODO: Diagonals
     }
 
