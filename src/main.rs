@@ -275,9 +275,6 @@ impl Game for GameState {
         }
 
         // Check for wins on the diagonals.
-        //
-        // We need two sets of our state variables since we're doing two checks at
-        // once with these loops
         same_adjacent_counter = 0;
         last_player_seen = PlayerName::None;
         // \ Diagonals first
@@ -296,6 +293,23 @@ impl Game for GameState {
             }
         }
 
+        // Now for / diagonals.
+        same_adjacent_counter = 0;
+        last_player_seen = PlayerName::None;
+        for x in 3..self.board.num_columns() {
+            // Loop over the column
+            for y in 0..self.board.num_rows() - 3 {
+                self.check_helper(x, y, &mut same_adjacent_counter, &mut last_player_seen);
+                self.check_helper(x - 1, y + 1, &mut same_adjacent_counter, &mut last_player_seen);
+                self.check_helper(x - 2, y + 2, &mut same_adjacent_counter, &mut last_player_seen);
+                self.check_helper(x - 3, y + 3, &mut same_adjacent_counter, &mut last_player_seen);
+                same_adjacent_counter = 0;
+                last_player_seen = PlayerName::None;
+                if self.winner != PlayerName::None {
+                    return;
+                }
+            }
+        }
     }
 
     fn debug_print(&mut self, message: String) {
