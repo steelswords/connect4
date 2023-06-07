@@ -21,12 +21,24 @@ struct GameState {
     winner: PlayerName,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 enum PlayerName {
     Player,
     Computer,
     Player2,
     None,
+}
+
+impl std::fmt::Debug for PlayerName {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f,"{}", match self {
+            PlayerName::Player => "Player 1".to_string(),
+            PlayerName::Player2 => "Player 2".to_string(),
+            PlayerName::Computer => "Computer".to_string(),
+            PlayerName::None => "No one".to_string(),
+            
+        })
+    }
 }
 
 fn player_to_color(player: &PlayerName) -> style::Color {
@@ -105,6 +117,7 @@ impl Game for GameState {
         queue!(stdout,
                cursor::MoveTo(0,0),
                style::PrintStyledContent(format!("Connect 4").blue()),
+               style::Print(" "),
                style::Print(&self.debug_message)
                )?;
 
@@ -349,6 +362,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Set up terminal
     crossterm::terminal::enable_raw_mode()?;
+    game.draw_board().expect("ERROR: Could not clear board!");
 
     // Main loop
     while !game.is_game_over() {
@@ -357,5 +371,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     }
     game.debug_print(format!("Good job! {:?} is the winner!", game.winner));
-    game.draw_board()
+    game.draw_board()?;
+    crossterm::terminal::disable_raw_mode()?;
+    Ok(())
 }
