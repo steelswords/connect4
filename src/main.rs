@@ -1,7 +1,8 @@
 use std::{collections::VecDeque, io::Write};
 use std::time::Duration;
+use std::thread;
 use std::io::stdout;
-use crossterm::{ExecutableCommand, queue, terminal, cursor, style::{self, Stylize}};
+use crossterm::{ExecutableCommand, queue, terminal, cursor::{self, Hide, Show}, style::{self, Stylize}};
 use crossterm::event::{KeyCode, Event};
 use std::error::Error;
 use array2d::Array2D;
@@ -362,6 +363,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Set up terminal
     crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(stdout(), Hide)?;
     game.draw_board().expect("ERROR: Could not clear board!");
 
     // Main loop
@@ -372,6 +374,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     game.debug_print(format!("Good job! {:?} is the winner!", game.winner));
     game.draw_board()?;
+    crossterm::execute!(stdout(), Show)?;
     crossterm::terminal::disable_raw_mode()?;
+    stdout().flush()?;
     Ok(())
 }
